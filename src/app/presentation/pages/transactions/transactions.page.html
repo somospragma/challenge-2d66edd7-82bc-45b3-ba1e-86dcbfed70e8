@@ -1,0 +1,161 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button default-href="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Transacciones</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="syncWithBackend()" [disabled]="isLoading()">
+        <ion-icon slot="icon-only" name="sync-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content
+      pulling-text="Desliza para actualizar"
+      refreshing-spinner="circles"
+      refreshing-text="Sincronizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="transactions-summary">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="4">
+          <div class="summary-item">
+            <ion-badge color="warning">{{ pendingCount() }}</ion-badge>
+            <ion-label>Pendientes</ion-label>
+          </div>
+        </ion-col>
+        <ion-col size="4">
+          <div class="summary-item">
+            <ion-badge color="success">{{ completedCount() }}</ion-badge>
+            <ion-label>Completadas</ion-label>
+          </div>
+        </ion-col>
+        <ion-col size="4">
+          <div class="summary-item">
+            <ion-badge color="danger">{{ failedCount() }}</ion-badge>
+            <ion-label>Fallidas</ion-label>
+          </div>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+
+  <div class="filters-section">
+    <ion-searchbar
+      [ngModel]="searchQuery()"
+      (ngModelChange)="onSearch($event)"
+      placeholder="Buscar por descripción o ID"
+      search-icon="search-outline"
+      show-clear-button="always">
+    </ion-searchbar>
+
+    <ion-grid>
+      <ion-row>
+        <ion-col size="6">
+          <ion-select
+            label="Estado"
+            [ngModel]="statusFilter()"
+            (ngModelChange)="onStatusFilterChange($event)"
+            interface="popover"
+            placeholder="Todos">
+            <ion-select-option value="ALL">Todos</ion-select-option>
+            <ion-select-option value="PENDING">Pendiente</ion-select-option>
+            <ion-select-option value="PROCESSING">Procesando</ion-select-option>
+            <ion-select-option value="COMPLETED">Completada</ion-select-option>
+            <ion-select-option value="FAILED">Fallida</ion-select-option>
+            <ion-select-option value="CANCELLED">Cancelada</ion-select-option>
+          </ion-select>
+        </ion-col>
+        <ion-col size="6">
+          <ion-select
+            label="Tipo"
+            [ngModel]="typeFilter()"
+            (ngModelChange)="onTypeFilterChange($event)"
+            interface="popover"
+            placeholder="Todos">
+            <ion-select-option value="ALL">Todos</ion-select-option>
+            <ion-select-option value="DEPOSIT">Depósito</ion-select-option>
+            <ion-select-option value="WITHDRAWAL">Retiro</ion-select-option>
+            <ion-select-option value="TRANSFER">Transferencia</ion-select-option>
+            <ion-select-option value="PAYMENT">Pago</ion-select-option>
+            <ion-select-option value="REFUND">Reembolso</ion-select-option>
+          </ion-select>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+
+    <ion-button
+      *ngIf="searchQuery() || statusFilter() !== 'ALL' || typeFilter() !== 'ALL'"
+      fill="clear"
+      size="small"
+      (click)="clearFilters()">
+      <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+      Limpiar filtros
+    </ion-button>
+  </div>
+
+  <div class="transactions-list">
+    <ion-loading [isOpen]="isLoading()" message="Cargando transacciones..."></ion-loading>
+
+    <div *ngIf="error() as errorMessage" class="error-banner">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <span>{{ errorMessage }}</span>
+      <ion-button fill="clear" size="small" (click)="loadTransactions()">
+        Reintentar
+      </ion-button>
+    </div>
+
+    <ion-list *ngIf="filteredTransactions().length > 0; else emptyState">
+      <ion-item
+        *ngFor="let transaction of filteredTransactions()"
+        [button]="true"
+        (click)="onTransactionClick(transaction)">
+        <app-transaction-card
+          [transaction]="transaction"
+          (retry)="retryFailedTransaction($event)">
+        </app-transaction-card>
+      </ion-item>
+    </ion-list>
+
+    <ng-template #emptyState>
+      <div class="empty-state">
+        <ion-icon name="receipt-outline" size="large"></ion-icon>
+        <h3>No hay transacciones</h3>
+        <p *ngIf="searchQuery() || statusFilter() !== 'ALL' || typeFilter() !== 'ALL'">
+          No se encontraron transacciones con los filtros aplicados.
+        </p>
+        <p *ngIf="!searchQuery() && statusFilter() === 'ALL' && typeFilter() === 'ALL'">
+          Tu historial de transacciones aparecerá aquí.
+        </p>
+        <ion-button
+          *ngIf="searchQuery() || statusFilter() !== 'ALL' || typeFilter() !== 'ALL'"
+          fill="outline"
+          (click)="clearFilters()">
+          Ver todas las transacciones
+        </ion-button>
+      </div>
+    </ng-template>
+
+    <ion-infinite-scroll
+      *ngIf="filteredTransactions().length > 0"
+      (ionInfinite)="loadMoreTransactions($event)">
+      <ion-infinite-scroll-content
+        loading-spinner="circles"
+        loading-text="Cargando más transacciones...">
+      </ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  </div>
+
+  <div class="sync-info" *ngIf="syncStatus() as status">
+    <ion-note [color]="status.synced ? 'medium' : 'warning'">
+      <ion-icon [name]="status.synced ? 'cloud-done-outline' : 'cloud-offline-outline'"></ion-icon>
+      {{ status.message }}
+    </ion-note>
+  </div>
+</ion-content>

@@ -1,0 +1,56 @@
+{
+  "name": "ionic-banking-app",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular",
+  "root": "src",
+  "sourceMapType": "eval",
+  "watchPatterns": [
+    "src/**/*",
+    "!src/**/*.spec.ts",
+    "!src/**/*.e2e.ts"
+  ],
+  "npmClient": "npm",
+  "build": {
+    "options": {
+      "prod": false,
+      "sourceMap": true
+    }
+  },
+  "serve": {
+    "port": 8100,
+    "host": "localhost",
+    "https": false,
+    "open": true
+  },
+  "proxies": [
+    {
+      "path": "/api",
+      "proxyUrl": "https://api.banking.example.com"
+    }
+  ],
+  "plugins": {
+    "@capacitor/core": {
+      "appId": "com.example.bankingapp",
+      "appName": "Banking App",
+      "webDir": "www",
+      "bundledWebRuntime": false
+    }
+  },
+  "schematics": {
+    "@ionic/angular-toolkit:component": {
+      "style": "scss",
+      "skipTests": false
+    },
+    "@ionic/angular-toolkit:page": {
+      "style": "scss",
+      "skipTests": false
+    }
+  },
+  "hooks": {
+    "build:before": "npm run build",
+    "build:after": "npm run cap:copy"
+  },
+  "id": "com.example.bankingapp"
+}
